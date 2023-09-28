@@ -243,7 +243,7 @@ HAVING b.round = 2;
 
 ### Assignment Q3
 > Q3-easy) State the average distance from the Boccino for the last three Bocce  
-> Q3) State the average distance from the Boccino for the last three  _thrown_ Bocce  
+> Q3) State the average distance from the Boccino for the last three  _thrown_ Bocce *per round*  
 
 
 ### Solution
@@ -251,7 +251,7 @@ HAVING b.round = 2;
 ```
 @Name('Q3-easy')
 SELECT AVG(distance)
-FROM Boccia(status="thrown").win:length(3);
+FROM Boccia.win:length(3);
 ```
 **Note**: Since the text does not specify "in the current round", the above is the correct solution. An alternative rational solution could have been:
 
