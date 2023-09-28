@@ -87,7 +87,8 @@ t=t.plus(10 seconds)
 
 ### Assignment Q1
 
-> Q1) Determine the total number of Bocce that have been thrown since the beginning of the **match**  
+> Q1) Determine the total number of Bocce that have been thrown since the beginning of the **match**
+>
 > Q1 bis) Determine how many Bocce each player has thrown since the beginning of the **match**
 
 #### Solution
