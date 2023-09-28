@@ -87,7 +87,7 @@ t=t.plus(10 seconds)
 
 ### Assignment Q1
 
-> Q1) Determine the total number of Bocce that have been thrown since the beginning of the **match**
+> Q1) Determine the total number of Bocce that have been thrown since the beginning of the **match**  
 > Q1 bis) Determine how many Bocce each player has thrown since the beginning of the **match**
 
 #### Solution
@@ -200,9 +200,9 @@ GROUP BY B.playerID
 
 An alternative request for this type of problem can be:
 
-> Q2) Determine the total number of Bocce that have been thrown since the beginning of the **round**
-> Q2-bis) Determine how many Bocce each player has thrown
-> Q2-extra) Determine the total number of Bocce that have been thrown since the beginning of the i-th **round**
+> Q2) Determine the total number of Bocce that have been thrown since the beginning of the **round**  
+> Q2-bis) Determine how many Bocce each player has thrown  
+> Q2-extra) Determine the total number of Bocce that have been thrown since the beginning of the i-th **round**  
 
 ### Solution
 
@@ -241,8 +241,8 @@ HAVING b.round = 2;
 
 
 ### Assignment Q3
-> Q3-easy) State the average distance from the Boccino for the last three Bocce:
-> Q3) State the average distance from the Boccino for the last three  _thrown_ Bocce:
+> Q3-easy) State the average distance from the Boccino for the last three Bocce  
+> Q3) State the average distance from the Boccino for the last three  _thrown_ Bocce  
 
 
 ### Solution
