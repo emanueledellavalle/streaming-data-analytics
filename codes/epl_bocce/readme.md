@@ -13,6 +13,9 @@
 
 > Suppose a camera mounted above the court can detect when a round starts (i.e., the boccino is the only ball on the court). Morevoer, whenever a player throws a boccia, it waits for all the bocce to stop, and then, for each moved boccia, it tells the position in the court and how far it is from the boccino.
 
+<img width="962" src="https://github.com/emanueledellavalle/streaming-data-analytics/assets/5645019/0c54d35b-7d94-4d8b-95f2-d04cf6973ad2">
+<a href="https://vimeo.com/873244267">BALINO - Bocce in circolo</a> from <a href="https://vimeo.com/user198205737">benedetta bellucci</a> on <a href="https://vimeo.com">Vimeo</a>.</p>
+
 ### Modeling
 > Formalize the schema of one or more streams necessary to perform the query in EPL.
 
