@@ -580,4 +580,12 @@ In the folder `../datagen` you find two notebooks to send them smoke and tempera
 
 They two notebooks use [ksql-python](https://github.com/bryanyang0528/ksql-python), a python wrapper for the KSQL REST API. As you can see, it allows for easily interact with the KSQL REST API using a python library.
 
+### Tear down the stack
+
+When you're done, tear down the stack by running:
+
+```
+docker-compose down
+```
+
 
