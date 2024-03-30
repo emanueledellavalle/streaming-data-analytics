@@ -26,7 +26,7 @@ There are two forces: the **reality** and the **pragmatism**
 The **reality** pushes for the most detailed model. Notably, the text above may imply that the Force-Sensing Resistors are independent sensors sending their own events separately from the arms. So one may be tempted to propose the following modeling.
 
 ```
-create schema RoboticArm(id int, status string); 
+create schema RoboticArm(id string, status string); 
 create schema ForceSensingResistors(idArm string, stressLvl int)
 ```
 
@@ -218,10 +218,8 @@ RoboticArm={id="2", status="movingGood", stressLevel=9}
 t=t.plus(2 seconds) 
 Stop={id="1"}
 t=t.plus(3 seconds) 
-RoboticArm={id="2", status="placingGood", stressLevel=3} 
-RoboticArm={id="1", status="placingGood", stressLevel=3} 
+RoboticArm={id="2", status="placingGood", stressLevel=3}  
 t=t.plus(4 seconds) 
-RoboticArm={id="1", status="moving", stressLevel=2} 
 RoboticArm={id="2", status="moving", stressLevel=1} 
 t=t.plus(3 seconds) 
 RoboticArm={id="1", status="ready", stressLevel=0} 
@@ -229,7 +227,7 @@ RoboticArm={id="2", status="ready", stressLevel=0}
 t=t.plus(1 seconds)
 ```
 
-In that case, E4 may be updated as follows to avoid creating a warning if the arm stops while moving.
+In that case, E4 may be updated as follows to **avoid creating a warning** if the arm stops while moving.
 
 ```
 @Name("E4.andnot") 

@@ -8,7 +8,7 @@
 ## The problem
 
 > Suppose you want to monitor a swarm of autonomous drones that pick tomatoes in a field with a stream processing engine. 
-A data stream includes the information about the trees to pick tomatoes from. The most important ones are the id of the tree, its GPS position, the kind of tomatoes it produces, and the time interval in which the drones can pick the tomatoes from it. Another stream tracks each drone. It contains an event every time it picks a tomato. Each event reports the id of the drone, the id of the tree it is picking tomatoes from, and its GPS position.
+A data stream includes information about the trees from which to pick tomatoes. The most important ones are the ID of the tree, its GPS position, the kind of tomatoes it produces, and the time interval in which the drones can pick the tomatoes from it. Another stream tracks each drone. It contains an event every time it picks a tomato. Each event reports the drone ID and the tree from which it picks tomatoes.
 
 > Tell every 20 seconds how many tomatoes the drones picked in the last 5 minutes grouped by their kind.
 
@@ -36,13 +36,13 @@ Some of the attributes described in the assignment are not necessary (position, 
 For now these attributes will suffice. We will modify them in the future.
 
 ### Assumptions
-Before delving into the problem it is better to define some assumptions to better model the data stream and the queries:
+Before delving into the problem, it is better to define some assumptions to model the data stream and the queries better:
 - multiple drones can pick tomatoes after a single issue of a _TreeToPickTomatoesFrom_ instance
 - multiple drones can pick tomatoes from the same tree
-- the time constraints of the _TreeToPickTomatoes_ are intrinsically respected by the system (we will come back to this later)
+- the system intrinsically respects the time constraints of the _TreeToPickTomatoes_ (we will come back to this later)
 
 ### Data stream generation
-In order to test the queries that will be later presented we will use the following data stream. It is suggested to modify it using different configurations to test wether your queries will work in different settings.
+Use the following data stream to test the queries. It is suggested to modify it using different configurations to test wether your queries will work in different settings.
 
 ```  
 TreeToPickTomatoesFrom = {treeID = 1, type = 'cherry'}
@@ -168,9 +168,9 @@ DronePicking = {droneID = 2, servicedTreeID = 2}
 t=t.plus(20 seconds)
 ```
 
-With this data stream multiple _TreeToPickTomatoesFrom_ instances for the same trees are issued in different points in time.
+With this data stream, multiple _TreeToPickTomatoesFrom_ instances for the same trees are issued at different points in time.
 
-When **QInsert** is executed, the two every clauses in the pattern will insert multiple times the same object, since it will respect the pattern for both the _TreeToPickTomatoesFrom_ instances.
+When **QInsert** is executed, the two `every` clauses in the pattern will insert the same object multiple times since it will respect the pattern for both the _TreeToPickTomatoesFrom_ instances.
 
 We can modify the query in the following way:
 ### New solution
@@ -185,7 +185,7 @@ every b = DronePicking(b.servicedTreeID = a.treeID)
 and not c = TreeToPickTomatoesFrom(c.treeID = a.treeID)
 ];
 ```
-By using the not clause the pattern will stop matching once a new istance of _TreeToPickTomatoesFrom_ is issued with a treeID of a request already present in the past.
+By using the not clause, the pattern will stop matching once a new instance of _TreeToPickTomatoesFrom_ is issued with a treeID of a request already present in the past.
 
 
 ## Bonus: respecting time constraints
