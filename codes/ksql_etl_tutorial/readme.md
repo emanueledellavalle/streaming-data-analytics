@@ -38,7 +38,7 @@ In the folder `./connectors` you find the Postgres, MongoDB, and Elasticsearch c
 
 ### The Postgres configuration
 
-Postgres requires some [custom configuration to play well with Debezium](https://debezium.io/documentation/reference/1.1/connectors/postgresql.html). See `./config/postgres/custom-config.conf` with the following content:
+Postgres requires some [custom configuration to play well with Debezium](https://debezium.io/documentation/reference/1.1/connectors/postgresql.html). See `./postgres/custom-config.conf` with the following content:
 
 ```
 listen_addresses = '*'
