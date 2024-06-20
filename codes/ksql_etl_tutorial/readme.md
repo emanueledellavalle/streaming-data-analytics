@@ -38,7 +38,7 @@ In the folder `./connectors` you find the Postgres, MongoDB, and Elasticsearch c
 
 ### The Postgres configuration
 
-Postgres requires some [custom configuration to play well with Debezium](https://debezium.io/documentation/reference/1.1/connectors/postgresql.html). See `./config/postgres/custom-config.conf` with the following content:
+Postgres requires some [custom configuration to play well with Debezium](https://debezium.io/documentation/reference/1.1/connectors/postgresql.html). See `./postgres/custom-config.conf` with the following content:
 
 ```
 listen_addresses = '*'
@@ -81,7 +81,7 @@ services:
       POSTGRES_PASSWORD: postgres-pw
       POSTGRES_DB: customers
     volumes:
-      - ./config/postgres/custom-config.conf:/etc/postgresql/postgresql.conf
+      - ./postgres/custom-config.conf:/etc/postgresql/postgresql.conf
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
 
   elastic:
@@ -95,7 +95,7 @@ services:
       discovery.type: single-node
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:6.1.0
+    image: confluentinc/cp-zookeeper:7.4.0
     hostname: zookeeper
     container_name: zookeeper
     ports:
@@ -105,7 +105,7 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
 
   broker:
-    image: confluentinc/cp-enterprise-kafka:6.1.0
+    image: confluentinc/cp-kafka:7.4.0
     hostname: broker
     container_name: broker
     depends_on:
@@ -123,7 +123,7 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
 
   schema-registry:
-    image: confluentinc/cp-schema-registry:6.1.0
+    image: confluentinc/cp-schema-registry:7.4.0
     hostname: schema-registry
     container_name: schema-registry
     depends_on:
@@ -133,10 +133,10 @@ services:
       - "8081:8081"
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "PLAINTEXT://broker:9092"
 
   ksqldb-server:
-    image: confluentinc/ksqldb-server:0.15.0
+    image: confluentinc/ksqldb-server:0.29.0
     hostname: ksqldb-server
     container_name: ksqldb-server
     depends_on:
@@ -156,19 +156,17 @@ services:
       KSQL_CONNECT_BOOTSTRAP_SERVERS: "broker:9092"
       KSQL_CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
       KSQL_CONNECT_VALUE_CONVERTER: "io.confluent.connect.avro.AvroConverter"
-      KSQL_CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
       KSQL_CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
-      KSQL_CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
-      KSQL_CONNECT_CONFIG_STORAGE_TOPIC: "ksql-connect-configs"
-      KSQL_CONNECT_OFFSET_STORAGE_TOPIC: "ksql-connect-offsets"
-      KSQL_CONNECT_STATUS_STORAGE_TOPIC: "ksql-connect-statuses"
+      KSQL_CONNECT_CONFIG_STORAGE_TOPIC: "_ksql-connect-configs"
+      KSQL_CONNECT_OFFSET_STORAGE_TOPIC: "_ksql-connect-offsets"
+      KSQL_CONNECT_STATUS_STORAGE_TOPIC: "_ksql-connect-statuses"
       KSQL_CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
       KSQL_CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
       KSQL_CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
       KSQL_CONNECT_PLUGIN_PATH: "/usr/share/kafka/plugins"
 
   ksqldb-cli:
-    image: confluentinc/ksqldb-cli:0.15.0
+    image: confluentinc/ksqldb-cli:0.29.0
     container_name: ksqldb-cli
     depends_on:
       - broker
@@ -207,6 +205,7 @@ Create a table that represents the customers. For simplicity, model a customer w
 
 ```sql
 CREATE TABLE customers (id TEXT PRIMARY KEY, name TEXT, age INT);
+
 ```
 
 Seed the table with some initial data:
@@ -215,6 +214,7 @@ Seed the table with some initial data:
 INSERT INTO customers (id, name, age) VALUES ('5', 'fred', 34);
 INSERT INTO customers (id, name, age) VALUES ('7', 'sue', 25);
 INSERT INTO customers (id, name, age) VALUES ('2', 'bill', 51);
+
 ```
 
 ### Configure MongoDB for Debezium
@@ -343,6 +343,7 @@ Before you issue more commands, tell ksqlDB to start all queries from earliest p
 
 ```sql
 SET 'auto.offset.reset' = 'earliest';
+
 ```
 
 Now you can ask Debezium to stream the Postgres changelog into Kafka. Invoke the following command in ksqlDB, which creates a Debezium source connector and writes all of its changes to Kafka topics:
@@ -362,6 +363,7 @@ CREATE SOURCE CONNECTOR customers_reader WITH (
     'transforms.unwrap.drop.tombstones' = 'false',
     'transforms.unwrap.delete.handling.mode' = 'rewrite'
 );
+
 ```
 
 Notice that this statement specifies an `unwrap` transform. By default, Debezium sends all events in an envelope that includes many pieces of information about the change captured. For this tutorial, the app only uses the value after it changed, so the command tells Kafka Connect  to keep this information and discard the rest.
@@ -383,6 +385,7 @@ CREATE SOURCE CONNECTOR logistics_reader WITH (
     'transforms.unwrap.delete.handling.mode' = 'drop',
     'transforms.unwrap.operation.header' = 'true'
 );
+
 ```
 
 ### Create the ksqlDB source streams
@@ -396,6 +399,7 @@ CREATE STREAM customers WITH (
     kafka_topic = 'customers.public.customers',
     value_format = 'avro'
 );
+
 ```
 
 Do the same for `orders`. For this stream, specify that the timestamp of the event is derived from the data itself. Specifically, it's extracted and parsed from the `ts` field.
@@ -407,6 +411,7 @@ CREATE STREAM orders WITH (
     timestamp = 'ts',
     timestamp_format = 'yyyy-MM-dd''T''HH:mm:ss'
 );
+
 ```
 
 Finally, repeat the same for `shipments`:
@@ -418,6 +423,7 @@ CREATE STREAM shipments WITH (
     timestamp = 'ts',
     timestamp_format = 'yyyy-MM-dd''T''HH:mm:ss'
 );
+
 ```
 
 ### Join the streams together
@@ -432,6 +438,7 @@ CREATE TABLE customers_by_key AS
     FROM customers
     GROUP BY id
     EMIT CHANGES;
+
 ```
 
 Now you can enrich the orders with more customer information. The following stream/table join creates a new stream that lifts the customer information into the order event:
@@ -448,6 +455,7 @@ CREATE STREAM enriched_orders AS
     LEFT JOIN customers_by_key c
     ON o.customer_id = c.id
     EMIT CHANGES;
+
 ```
 
 You can take this further by enriching all shipments with more information about the order and customer. Use a stream/stream join to find orders in the relevant window of time. This creates a new stream called `shipped_orders` that unifies the shipment, order, and customer information:
@@ -469,6 +477,7 @@ CREATE STREAM shipped_orders WITH (
     WITHIN 7 DAYS
     ON s.order_id = o.order_id
     EMIT CHANGES;
+
 ```
 
 ### Start the Elasticsearch sink connector
@@ -482,10 +491,10 @@ CREATE SINK CONNECTOR enriched_writer WITH (
     'type.name' = 'kafka-connect',
     'topics' = 'shipped_orders'
 );
+
 ```
 
-Check that the data arrived in the index at this location [http://localhost:9200/shipped_orders/_search?pretty](http://localhost:9200/shipped_orders/_search?pretty)
-```
+Check that the data arrived in the index at this location `curl http://localhost:9200/shipped_orders/_search?pretty`
 
 Your output should resemble:
 
@@ -608,6 +617,7 @@ Insert a new row into the Postgres prompt.
 
 ```sql
 INSERT INTO customers (id, name, age) VALUES ('3', 'alice', 42);
+
 ```
 
 If you exited from the Mongo container, start by logging into the container agains:
@@ -630,11 +640,11 @@ db.orders.insert({"customer_id": "3", "order_id": "27", "price": 42.27, "currenc
 db.shipments.insert({"order_id": "27", "shipment_id": "84", "origin": "maine", "ts": "2020-04-04T06:13:00"})
 ```
 
-Check that the data arrived in the Elasticsearch index at [http://localhost:9200/shipped_orders/_search?pretty](http://localhost:9200/shipped_orders/_search?pretty)
+Check that the data arrived in the Elasticsearch index wirh `curl http://localhost:9200/shipped_orders/_search?pretty`
 
 Your output should include:
 
-```
+```json
 	{
         "_index" : "shipped_orders",
         "_type" : "kafka-connect",

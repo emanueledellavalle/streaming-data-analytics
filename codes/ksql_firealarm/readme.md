@@ -21,6 +21,7 @@ run the following commands that allows to rerun the queries always from the begi
 
 ```
 SET 'auto.offset.reset' = 'earliest';
+
 ```
 
 ### Let's explore ksqlDB by example
@@ -38,6 +39,7 @@ CREATE STREAM Temperature_STREAM (sensor VARCHAR, temperature DOUBLE, ts VARCHAR
   partitions=1,
   timestamp='ts',
   timestamp_format='yyyy-MM-dd''T''HH:mm:ssZ');
+
 ```
 
 
@@ -49,10 +51,12 @@ CREATE STREAM Smoke_STREAM (sensor VARCHAR, smoke BOOLEAN, ts VARCHAR)
   partitions=1,
   timestamp='ts',
   timestamp_format='yyyy-MM-dd''T''HH:mm:ssZ');
+
 ```
 
 ```
 show topics;
+
 ```
 
 #### Let's insert some data into them
@@ -71,6 +75,7 @@ INSERT INTO Smoke_STREAM (sensor, smoke, ts) VALUES ('S1', true, '2021-10-23T06:
 INSERT INTO Temperature_STREAM (sensor, temperature, ts) VALUES ('S1', 55, '2021-10-23T06:00:04+0200');
 INSERT INTO Smoke_STREAM (sensor, smoke, ts) VALUES ('S1', true, '2021-10-23T06:00:04+0200');
 
+
 ```
 
 #### Q0 - Filter
@@ -81,6 +86,7 @@ the temperature events whose temperature is greater than 50 °C
 SELECT *
 FROM Temperature_STREAM
 WHERE temperature > 50 EMIT CHANGES;
+
 ```
 
 The query returns:
@@ -105,6 +111,7 @@ and you send more data
 ```
 INSERT INTO Temperature_STREAM (sensor, temperature, ts) VALUES ('S1', 30, '2021-10-23T06:00:05+0200');
 INSERT INTO Temperature_STREAM (sensor, temperature, ts) VALUES ('S1', 60, '2021-10-23T06:00:06+0200');
+
 ```
 
 the result will be updated accordingly
@@ -128,6 +135,7 @@ the average of all the temperature observation for each sensor up to the last ev
 SELECT SENSOR, AVG(temperature) AS AVG_TEMP
 FROM Temperature_STREAM
 GROUP BY SENSOR EMIT CHANGES;
+
 ```
 
 this query will return
@@ -143,6 +151,7 @@ If you want to see it changing, you can insert more data in the other CLI, e.g.,
 
 ```
 INSERT INTO Temperature_STREAM (sensor, temperature, ts) VALUES ('S1', 70, '2021-10-23T06:00:07+0200');
+
 ```
 
 The answer becomes:
@@ -174,6 +183,7 @@ SELECT SENSOR, AVG(temperature) AS AVG_TEMP
 FROM Temperature_STREAM 
      WINDOW TUMBLING (SIZE 4 SECONDS)
 GROUP BY SENSOR EMIT CHANGES;
+
 ```
 
 returning 
@@ -198,6 +208,7 @@ SELECT SENSOR,
 FROM Temperature_STREAM 
      WINDOW TUMBLING (SIZE 4 SECONDS)
 GROUP BY SENSOR EMIT CHANGES;
+
 ```
 
 or even better using  TIMESTAMPTOSTRING to have a human readable timestamp
@@ -210,6 +221,7 @@ SELECT SENSOR,
 FROM Temperature_STREAM 
      WINDOW TUMBLING (SIZE 4 SECONDS)
 GROUP BY SENSOR EMIT CHANGES;
+
 ```
 
 you get a result like this:
@@ -228,6 +240,7 @@ if you send more data within the scope of the last window:
 
 ```
 INSERT INTO Temperature_STREAM (sensor, temperature, ts) VALUES ('S1', 80, '2021-10-23T06:00:07+0200');
+
 ```
 
 a new result appears for the same window (see window_start and window_end):
@@ -245,6 +258,7 @@ if you send more data within the scope of the next window:
 
 ```
 INSERT INTO Temperature_STREAM (sensor, temperature, ts) VALUES ('S1', 80, '2021-10-23T06:00:09+0200');
+
 ```
 
 a new window appears (see window_start and window_end) with the next result
@@ -267,7 +281,7 @@ but if you stop and you rerun the query, you get only a result per window
 +--------------------------+--------------------------+--------------------------+--------------------------+
 |S1                        |45.0                      |2021-10-23 06:00:00+0200  |2021-10-23 06:00:04+0200  |
 |S1                        |59.0                      |2021-10-23 06:00:04+0200  |2021-10-23 06:00:08+0200  |
-|S1                        |80.0                       |2021-10-23 06:00:08+0200 |2021-10-23 06:00:12+0200  |
+|S1                        |80.0                      |2021-10-23 06:00:08+0200 |2021-10-23 06:00:12+0200  |
 ```
 
 **SO** the tubling windows behaves as in EPL on the historical data, but they also give real-time updates whenever a new data arrives.
@@ -278,6 +292,7 @@ If you send
 
 ```
 INSERT INTO Temperature_STREAM (sensor, temperature, ts) VALUES ('S1', 70, '2021-10-23T06:00:07+0200');
+
 ```
 
 whose timestamp makes it fit into the window [06:00:04+0200-06:00:08+0200] the results is:
@@ -319,6 +334,7 @@ SELECT SENSOR,
 FROM Temperature_STREAM 
       WINDOW HOPPING (SIZE 4 SECONDS, ADVANCE BY 2 SECONDS)
 GROUP BY SENSOR EMIT CHANGES;
+
 ```
 
 returning
@@ -353,6 +369,7 @@ FROM Temperature_STREAM T
  S.smoke  and
  S.ts < T.ts 
  EMIT CHANGES;
+
 ```
 
 ##### Discussion
@@ -382,12 +399,14 @@ FROM Temperature_STREAM T
  S.ts < T.ts 
  group by S.sensor
  EMIT CHANGES;
+
 ``` 
 
 and query it with a pull query
 
 ```
 SELECT * FROM FireAlerts WHERE sensor='S1';
+
 ```
 
 
@@ -408,6 +427,7 @@ FROM Temperature_STREAM T
  S.smoke  and
  S.ts < T.ts 
  EMIT CHANGES;
+
 ```
 
 ```
@@ -419,6 +439,7 @@ FROM Fire_STREAM
       WINDOW HOPPING (SIZE 10 SECONDS, ADVANCE BY 1 SECOND)
 GROUP BY SENSOR 
 EMIT CHANGES;
+
 ```
 
 that returns
@@ -457,6 +478,7 @@ FROM Fire_STREAM
       WINDOW HOPPING (SIZE 10 SECONDS, ADVANCE BY 1 SECOND)
 GROUP BY SENSOR 
 EMIT CHANGES;
+
 ```
 
 querable also with a [pull query](https://docs.ksqldb.io/en/latest/developer-guide/ksqldb-reference/select-pull-query/)
@@ -467,6 +489,7 @@ WHERE
 SENSOR ='S1' and 
 WINDOWSTART >= '2021-10-23T06:00:00+0200' AND
 WINDOWEND <= '2021-10-23T06:00:10+0200';
+
 ```
 
 returning 
@@ -505,6 +528,7 @@ FROM Temperature_STREAM
   WINDOW SESSION (2 SECONDS)
   GROUP BY SENSOR
   EMIT CHANGES;
+  
 ```  
 
 returns
@@ -520,6 +544,7 @@ inserting
 
 ```   
 INSERT INTO Temperature_STREAM (sensor, temperature, ts) VALUES ('S1', 70, '2021-10-23T06:00:15+0200');
+
 ``` 
 
 returns
@@ -536,6 +561,7 @@ inserting
 
 ```   
 INSERT INTO Temperature_STREAM (sensor, temperature, ts) VALUES ('S1', 70, '2021-10-23T06:00:16+0200');
+
 ``` 
 
 returns
@@ -556,6 +582,7 @@ inserting
 
 ```
 INSERT INTO Temperature_STREAM (sensor, temperature, ts) VALUES ('S1', 70, '2021-10-23T06:00:07+0200');
+
 ```
 
 returns
@@ -573,10 +600,10 @@ returns
 
 #### Sending data programmatically
 
-In the folder `../datagen` you find two notebooks to send them smoke and temperature events programmatically:
+In the folder `datagen` you find two notebooks to send them smoke and temperature events programmatically:
 
-* Run the code in [../datagen/smoke_sensor_simulator.ipynb](../ksql_firealarm/datagen/smoke_sensor_simulator.ipynb) to simulate the smoke events.
-* Run the code in [../datagen/temperature_sensor_simulator.ipynb](../ksql_firealarm/datagen/temperature_sensor_simulator.ipynb) to simulate the temperature events.
+* Run the code in [./datagen/smoke_sensor_simulator.ipynb](./datagen/smoke_sensor_simulator.ipynb) to simulate the smoke events.
+* Run the code in [./datagen/temperature_sensor_simulator.ipynb](./datagen/temperature_sensor_simulator.ipynb) to simulate the temperature events.
 
 They two notebooks use [ksql-python](https://github.com/bryanyang0528/ksql-python), a python wrapper for the KSQL REST API. As you can see, it allows for easily interact with the KSQL REST API using a python library.
 

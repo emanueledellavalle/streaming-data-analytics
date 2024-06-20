@@ -55,7 +55,6 @@ The `docker-compose.yml` file defines the services to launch:
 
 ```yaml
 ---
----
 version: '2'
 
 services:
@@ -71,10 +70,10 @@ services:
       MYSQL_USER: example-user
       MYSQL_PASSWORD: example-pw
     volumes:
-      - "./config/mysql/custom-config.cnf:/etc/mysql/conf.d/custom-config.cnf"
+      - "./mysql/custom-config.cnf:/etc/mysql/conf.d/custom-config.cnf"
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:6.1.0
+    image: confluentinc/cp-zookeeper:7.4.0
     hostname: zookeeper
     container_name: zookeeper
     ports:
@@ -84,7 +83,7 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
 
   broker:
-    image: confluentinc/cp-enterprise-kafka:6.1.0
+    image: confluentinc/cp-kafka:7.4.0
     hostname: broker
     container_name: broker
     depends_on:
@@ -102,7 +101,7 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
 
   schema-registry:
-    image: confluentinc/cp-schema-registry:6.1.0
+    image: confluentinc/cp-schema-registry:7.4.0
     hostname: schema-registry
     container_name: schema-registry
     depends_on:
@@ -112,10 +111,10 @@ services:
       - "8081:8081"
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "PLAINTEXT://broker:9092"
 
   ksqldb-server:
-    image: confluentinc/ksqldb-server:0.15.0
+    image: confluentinc/ksqldb-server:0.29.0
     hostname: ksqldb-server
     container_name: ksqldb-server
     depends_on:
@@ -136,19 +135,17 @@ services:
       KSQL_CONNECT_BOOTSTRAP_SERVERS: "broker:9092"
       KSQL_CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
       KSQL_CONNECT_VALUE_CONVERTER: "io.confluent.connect.avro.AvroConverter"
-      KSQL_CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
       KSQL_CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
-      KSQL_CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
-      KSQL_CONNECT_CONFIG_STORAGE_TOPIC: "ksql-connect-configs"
-      KSQL_CONNECT_OFFSET_STORAGE_TOPIC: "ksql-connect-offsets"
-      KSQL_CONNECT_STATUS_STORAGE_TOPIC: "ksql-connect-statuses"
+      KSQL_CONNECT_CONFIG_STORAGE_TOPIC: "_ksql-connect-configs"
+      KSQL_CONNECT_OFFSET_STORAGE_TOPIC: "_ksql-connect-offsets"
+      KSQL_CONNECT_STATUS_STORAGE_TOPIC: "_ksql-connect-statuses"
       KSQL_CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
       KSQL_CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
       KSQL_CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
       KSQL_CONNECT_PLUGIN_PATH: "/usr/share/kafka/plugins"
 
   ksqldb-cli:
-    image: confluentinc/ksqldb-cli:0.15.0
+    image: confluentinc/ksqldb-cli:0.29.0
     container_name: ksqldb-cli
     depends_on:
       - broker
@@ -191,6 +188,7 @@ Grant the privileges for replication by executing the following statement at the
 GRANT ALL PRIVILEGES ON *.* TO 'example-user' WITH GRANT OPTION;
 ALTER USER 'example-user'@'%' IDENTIFIED WITH mysql_native_password BY 'example-pw';
 FLUSH PRIVILEGES;
+
 ```
 
 ### Create the calls table in MySQL
@@ -199,12 +197,14 @@ Seed your blank database with some initial state. In the same MySQL CLI, switch 
 
 ```sql
 USE call-center;
+
 ```
 
 Create a table that represents phone calls that were made. Keep this table simple: the columns represent the name of the person calling, the reason that they called, and the duration in seconds of the call.
 
 ```sql
 CREATE TABLE calls (name TEXT, reason TEXT, duration_seconds INT);
+
 ```
 
 And now add some initial data. You'll add more later, but this will suffice for now:
@@ -220,6 +220,7 @@ INSERT INTO calls (name, reason, duration_seconds) VALUES ("michael", "help", 20
 INSERT INTO calls (name, reason, duration_seconds) VALUES ("colin", "purchase", 800);
 INSERT INTO calls (name, reason, duration_seconds) VALUES ("derek", "help", 2514);
 INSERT INTO calls (name, reason, duration_seconds) VALUES ("derek", "refund", 325);
+
 ```
 
 ### Start the Debezium connector
@@ -234,6 +235,7 @@ Before you issue more commands, tell ksqlDB to start all queries from earliest p
 
 ```sql
 SET 'auto.offset.reset' = 'earliest';
+
 ```
 
 Now you can connect to Debezium to stream MySQL's changelog into Kafka. Invoke the following command in ksqlDB, which creates a Debezium source connector and writes all of its changes to Kafka topics:
@@ -254,18 +256,21 @@ CREATE SOURCE CONNECTOR calls_reader WITH (
     'table.whitelist' = 'call-center.calls',
     'include.schema.changes' = 'false'
 );
+
 ```
 
 After a few seconds, it should create a topic named `call-center-db.call-center.calls`. Confirm that by running:
 
 ```sql
 SHOW TOPICS;
+
 ```
 
 Print the raw topic contents to make sure it captured the initial rows that you seeded the calls table with:
 
 ```sql
 PRINT 'call-center-db.call-center.calls' FROM BEGINNING;
+
 ```
 
 If nothing prints out, the connector probably failed to launch. You can check ksqlDB's logs with:
@@ -278,6 +283,7 @@ You can also show the status of the connector in the ksqlDB CLI with:
 
 ```
 DESCRIBE CONNECTOR calls_reader;
+
 ```
 
 ### Create the ksqlDB calls stream
@@ -289,6 +295,7 @@ CREATE STREAM calls WITH (
     kafka_topic = 'call-center-db.call-center.calls',
     value_format = 'avro'
 );
+
 ```
 
 ### Create the materialized views
@@ -310,6 +317,7 @@ CREATE TABLE support_view AS
     FROM calls
     GROUP BY after->name
     EMIT CHANGES;
+
 ```
 
 You have your first materialized view in place. Now create one more.
@@ -324,6 +332,7 @@ CREATE TABLE lifetime_view AS
     FROM calls
     GROUP BY after->name
     EMIT CHANGES;
+
 ```
 
 ### Query the materialized views
@@ -334,6 +343,7 @@ Now you can query our materialized views to look up the values for keys with low
 SELECT name, distinct_reasons, last_reason
 FROM support_view
 WHERE name = 'derek';
+
 ```
 
 Your output should resemble:
@@ -351,6 +361,7 @@ How many times has Michael called us, and how many minutes has he spent on the l
 SELECT name, total_calls, minutes_engaged
 FROM lifetime_view
 WHERE name = 'michael';
+
 ```
 
 Your output should resemble:
@@ -377,6 +388,7 @@ Inserting a new row into the MySQL prompt:
 INSERT INTO calls (name, reason, duration_seconds) VALUES ("derek", "help", 2727);
 
 INSERT INTO calls (name, reason, duration_seconds) VALUES ("michael", "purchase", 4242);
+
 ```
 
 Watch the results propagate in real-time on the ksqlDB cli.
@@ -387,6 +399,7 @@ Query again our materialized views to look up the new values with low latency. H
 SELECT name, distinct_reasons, last_reason
 FROM support_view
 WHERE name = 'derek';
+
 ```
 
 Your output should resemble:
@@ -395,7 +408,7 @@ Your output should resemble:
 +---------+-------------------+------------+
 |NAME     |DISTINCT_REASONS   |LAST_REASON |
 +---------+-------------------+------------+
-|derek    |4                  |help        |
+|derek    |3                  |help        |
 ```
 
 How many times has Michael called us, and how many minutes has he spent on the line?
@@ -404,6 +417,7 @@ How many times has Michael called us, and how many minutes has he spent on the l
 SELECT name, total_calls, minutes_engaged
 FROM lifetime_view
 WHERE name = 'michael';
+
 ```
 
 Your output should resemble:
